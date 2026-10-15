@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Generator Penawaran & Invoice</title>
+<link href="https://fonts.googleapis.com/css2?family=Squada+One&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brand-teal: #2a867f;
+    --brand-cyan: #00c09a;
+    --brand-navy: #29394f;
+    --brand-dark-teal: #108076;
+    --text-main: #333333;
+    --text-muted: #445168;
+    
+    --ui-teal: #1aad82;
+    --ui-navy: #1e2d4a;
+    --bg: #f4f6f9;
+    --border: #e2e8f0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
+
+  /* â”€â”€â”€ LAYOUT UI UTAMA â”€â”€â”€ */
+  .app { display: grid; grid-template-columns: 420px 1fr; min-height: 100vh; width: 100%; }
+  
+  /* â”€â”€â”€ SIDEBAR â”€â”€â”€ */
+  .sidebar { background: #fff; border-right: 1px solid var(--border); display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; z-index: 50; }
+  .sidebar-scroll { flex: 1; overflow-y: auto; padding-bottom: 20px; }
+  
+  .sidebar-header { background: var(--ui-navy); color: white; padding: 1.5rem; position: sticky; top: 0; z-index: 10; }
+  .sidebar-header h1 { font-family: 'Squada One', sans-serif; font-size: 2rem; letter-spacing: 1px; }
+  .sidebar-header p { font-size: 0.75rem; color: rgba(255,255,255,0.7); margin-top: 4px; }
+
+  .doc-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .doc-tab { flex: 1; padding: 1rem; text-align: center; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; cursor: pointer; border: none; background: none; color: #a0aec0; border-bottom: 3px solid transparent; transition: 0.2s; }
+  .doc-tab.active { color: var(--ui-teal); border-bottom-color: var(--ui-teal); background: rgba(26,173,130,0.05); }
+
+  .form-body { padding: 1.5rem; }
+  .section { margin-bottom: 1.5rem; }
+  .section-title { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--ui-teal); margin-bottom: 0.75rem; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+
+  label { display: block; font-size: 0.75rem; font-weight: 700; color: #718096; margin-bottom: 4px; text-transform: uppercase; }
+  input, textarea, select { width: 100%; padding: 0.7rem 0.8rem; border: 1px solid var(--border); border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 0.85rem; margin-bottom: 1rem; outline: none; transition: 0.2s; }
+  input[type="file"] { padding: 0.5rem; background: #f8fafc; cursor: pointer; }
+  input:focus, textarea:focus { border-color: var(--ui-teal); box-shadow: 0 0 0 3px rgba(26,173,130,0.1); }
+  
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* â”€â”€â”€ ITEMS TABLE SIDEBAR â”€â”€â”€ */
+  .items-header { display: grid; grid-template-columns: 3fr 1fr 1fr 36px; gap: 6px; font-size: 0.7rem; font-weight: 700; color: #718096; margin-bottom: 8px; }
+  .item-row { display: grid; grid-template-columns: 3fr 1fr 1fr 36px; gap: 6px; margin-bottom: 8px; }
+  .item-row input { margin-bottom: 0; }
+  .btn-remove { height: 40px; border: none; background: #fee2e2; color: #e53e3e; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+  .btn-add { width: 100%; padding: 0.7rem; border: 1.5px dashed var(--ui-teal); background: none; color: var(--ui-teal); border-radius: 6px; font-weight: 700; cursor: pointer; }
+  .btn-add:hover { background: rgba(26,173,130,0.05); }
+
+  .totals-box { background: var(--bg); border-radius: 6px; padding: 1rem; }
+  .total-row { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+  .total-row.grand { font-size: 1.1rem; font-weight: 800; color: var(--ui-teal); border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; margin-bottom: 0; }
+
+  .actions { padding: 1rem 1.5rem; border-top: 1px solid var(--border); background: #fff; display: flex; gap: 10px; z-index: 20; }
+  .actions button { flex: 1; padding: 0.9rem; border: none; border-radius: 6px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; transition: 0.2s; color: white; text-transform: uppercase; font-size: 0.85rem; }
+  .btn-primary { background: var(--ui-teal); box-shadow: 0 4px 6px rgba(26,173,130,0.2); }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-secondary { background: var(--ui-navy); }
+
+  /* â”€â”€â”€ AREA PREVIEW KERTAS â”€â”€â”€ */
+  .preview-area { background: var(--bg); padding: 2rem; display: flex; justify-content: center; align-items: flex-start; }
+  
+  .scale-wrapper { position: relative; transition: all 0.3s ease; }
+
+  .preview-wrapper { 
+    background: white; 
+    width: 794px; 
+    min-height: 1123px; 
+    height: max-content;
+    box-shadow: 0 10px 50px rgba(0,0,0,0.1); 
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: top left;
+  }
+
+  /* Dekorasi Kertas */
+  .deco-accent-top { position: absolute; top: 0; left: 0; width: 100%; height: 6px; z-index: 3; background: linear-gradient(90deg, var(--brand-navy) 0%, var(--brand-teal) 48%, var(--brand-cyan) 100%); }
+  .deco-bottom-left { position: absolute; bottom: 0; left: 0; width: 300px; height: 300px; z-index: 1; pointer-events: none; opacity: .45; }
+
+  /* Konten Utama */
+  .doc-main { padding: 54px 58px 46px; position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; }
+
+  /* â”€â”€â”€ KOP SURAT (GAMBAR) â”€â”€â”€ */
+  .doc-head { text-align: center; padding-bottom: 16px; border-bottom: 2px solid var(--brand-navy); position: relative; }
+  .doc-head::after { content: ''; position: absolute; left: 50%; transform: translateX(-50%); bottom: -2px; width: 130px; height: 2px; background: var(--brand-cyan); }
+  .doc-kop { display: block; width: 460px; max-width: 100%; height: auto; margin: 0 auto; object-fit: contain; }
+
+  /* â”€â”€â”€ JUDUL DOKUMEN & METADATA â”€â”€â”€ */
+  .doc-titlebar { display: flex; align-items: flex-end; justify-content: space-between; gap: 26px; padding: 25px 0 21px; }
+  .doc-title { font-family: 'Squada One', sans-serif; font-size: 2.5rem; color: var(--brand-teal); line-height: 1; letter-spacing: .5px; text-transform: uppercase; }
+  .doc-title-sub { font-size: .66rem; font-weight: 700; color: #a0aec0; text-transform: uppercase; letter-spacing: 1.7px; margin-top: 8px; }
+  .doc-meta { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+  .doc-meta-row { display: flex; gap: 12px; justify-content: flex-end; align-items: baseline; }
+  .doc-meta-label { font-size: .63rem; font-weight: 800; color: #a0aec0; text-transform: uppercase; letter-spacing: .9px; min-width: 92px; text-align: right; }
+  .doc-meta-value { font-size: .8rem; font-weight: 800; color: var(--text-main); text-transform: uppercase; }
+  .doc-meta-value.accent { color: var(--brand-teal); }
+
+  /* â”€â”€â”€ KARTU KEPADA â”€â”€â”€ */
+  .doc-to { align-self: flex-start; min-width: 340px; max-width: 100%; background: #f5faf9; border-left: 3px solid var(--brand-teal); padding: 13px 18px; margin-bottom: 24px; }
+  .doc-to-label { font-size: .6rem; font-weight: 800; color: var(--brand-teal); text-transform: uppercase; letter-spacing: 1.3px; margin-bottom: 5px; }
+  .doc-to-name { font-size: .92rem; font-weight: 800; color: #1a202c; text-transform: uppercase; letter-spacing: .2px; }
+  .doc-to-address { font-size: .78rem; font-weight: 500; color: var(--text-muted); margin-top: 3px; white-space: pre-line; line-height: 1.5; }
+
+  /* â”€â”€â”€ TABEL â”€â”€â”€ */
+  .doc-table { width: 100%; border-collapse: collapse; }
+  .doc-table thead th { font-size: .6rem; font-weight: 800; color: #fff; background: var(--brand-navy); text-transform: uppercase; letter-spacing: .9px; padding: 11px 10px; }
+  .doc-table thead th:first-child { border-radius: 3px 0 0 3px; padding-left: 12px; }
+  .doc-table thead th:last-child { border-radius: 0 3px 3px 0; padding-right: 12px; }
+  .doc-table thead th:nth-child(1) { text-align: center; width: 6%; }
+  .doc-table thead th:nth-child(2) { text-align: left; width: 44%; }
+  .doc-table thead th:nth-child(3) { text-align: right; width: 20%; }
+  .doc-table thead th:nth-child(4) { text-align: center; width: 8%; }
+  .doc-table thead th:nth-child(5) { text-align: right; width: 22%; }
+
+  .doc-table tbody td { padding: 12px 10px; font-size: .82rem; vertical-align: top; border-bottom: 1px solid #e6edf2; color: #2d3748; font-variant-numeric: tabular-nums; }
+  .doc-table tbody td:first-child { padding-left: 12px; }
+  .doc-table tbody td:last-child { padding-right: 12px; }
+  .doc-table tbody tr:nth-child(even) td { background: #fafcfc; }
+  .doc-table tbody td:nth-child(1) { text-align: center; font-weight: 700; color: #a0aec0; }
+  .doc-table tbody td:nth-child(2) { text-align: left; font-weight: 600; color: #1a202c; line-height: 1.5; }
+  .doc-table tbody td:nth-child(3) { text-align: right; font-weight: 600; color: var(--text-muted); }
+  .doc-table tbody td:nth-child(4) { text-align: center; font-weight: 700; color: var(--text-muted); }
+  .doc-table tbody td:nth-child(5) { text-align: right; font-weight: 800; color: #1a202c; }
+
+  /* â”€â”€â”€ RINGKASAN TOTAL â”€â”€â”€ */
+  .doc-summary { display: flex; justify-content: flex-end; margin-top: 20px; }
+  .doc-summary-inner { width: 300px; }
+  .doc-sum-row { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 2px; border-bottom: 1px dashed #d6e1e8; }
+  .doc-sum-row .lbl { font-size: .68rem; font-weight: 800; color: #8b9bab; text-transform: uppercase; letter-spacing: .8px; }
+  .doc-sum-row .val { font-size: .8rem; font-weight: 700; color: var(--text-main); font-variant-numeric: tabular-nums; }
+  .doc-sum-row.neg .val { color: #d64545; }
+  .doc-sum-grand { display: flex; justify-content: space-between; align-items: center; background: var(--brand-teal); color: #fff; padding: 12px 14px; margin-top: 12px; border-radius: 3px; }
+  .doc-sum-grand .lbl { font-size: .7rem; font-weight: 800; letter-spacing: 1.3px; text-transform: uppercase; }
+  .doc-sum-grand .val { font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  /* â”€â”€â”€ CATATAN â”€â”€â”€ */
+  .doc-notes-area { margin-top: 26px; }
+  .doc-notes-card { background: #fbfcfd; border: 1px solid #e6edf2; border-left: 3px solid var(--brand-cyan); padding: 12px 16px; }
+  .doc-notes-title { font-size: .6rem; font-weight: 800; color: var(--brand-navy); text-transform: uppercase; letter-spacing: 1.3px; margin-bottom: 6px; }
+  .doc-notes { font-size: .76rem; font-weight: 500; color: var(--text-muted); white-space: pre-line; line-height: 1.6; }
+  .doc-validity { font-size: .74rem; font-style: italic; font-weight: 600; color: var(--brand-teal); margin-top: 5px; }
+
+  /* â”€â”€â”€ FOOTER: PEMBAYARAN & TTD â”€â”€â”€ */
+  .doc-footer { margin-top: auto; padding-top: 36px; display: flex; align-items: flex-end; justify-content: space-between; gap: 30px; }
+  .doc-pay { flex: 1; max-width: 300px; }
+  .doc-pay-title { font-size: .6rem; font-weight: 800; color: var(--brand-navy); text-transform: uppercase; letter-spacing: 1.3px; padding-bottom: 6px; margin-bottom: 7px; border-bottom: 1.5px solid var(--brand-navy); }
+  .doc-pay-row { display: flex; gap: 10px; padding: 3px 0; align-items: baseline; }
+  .doc-pay-row .k { font-size: .6rem; font-weight: 800; color: #a0aec0; text-transform: uppercase; letter-spacing: .8px; min-width: 88px; flex-shrink: 0; }
+  .doc-pay-row .v { font-size: .75rem; font-weight: 700; color: var(--text-main); line-height: 1.45; }
+
+  /* Area TTD & Stempel */
+  .doc-sig { width: 232px; text-align: center; flex-shrink: 0; position: relative; }
+  .doc-sig-label { font-size: .66rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 4px; }
+  .doc-sig-img-wrap { height: 78px; width: 100%; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 6px; position: relative; z-index: 2; }
+  .doc-sig-img { max-height: 100%; max-width: 100%; object-fit: contain; }
+
+  /* Stempel Overlay FIX */
+  .doc-stamp-wrap { 
+    position: absolute; 
+    width: 130px; 
+    height: 130px; 
+    bottom: -22px; 
+    left: 50%; 
+    margin-left: -65px;
+    opacity: 0.85; 
+    mix-blend-mode: multiply; 
+    z-index: 1;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .doc-stamp-img { max-width: 100%; max-height: 100%; width: auto; height: auto; }
+
+  .doc-sig-name-wrap { border-bottom: 1.5px solid var(--brand-navy); padding-bottom: 5px; margin-bottom: 5px; display: inline-block; width: 100%; position: relative; z-index: 3; }
+  .doc-sig-name { font-size: .78rem; font-weight: 800; color: #1a202c; text-transform: uppercase; letter-spacing: .3px; }
+  .doc-sig-title { font-size: .7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .3px; }
+
+  /* â”€â”€â”€ RESPONSIVE DESIGN â”€â”€â”€ */
+  @media (max-width: 1000px) {
+    .app { display: flex; flex-direction: column; }
+    .sidebar { width: 100%; height: auto; border-right: none; position: relative; z-index: 10;}
+    .sidebar-scroll { overflow-y: visible; padding-bottom: 0; }
+    .actions { position: fixed; bottom: 0; left: 0; width: 100%; padding: 1rem; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); border-top: none; }
+    .preview-area { padding: 1.5rem 1rem 6rem 1rem; } 
+    .row-2 { grid-template-columns: 1fr; gap: 0; }
+  }
+
+  @media (max-width: 600px) {
+    .items-header { display: none; }
+    .item-row { 
+      grid-template-columns: 1fr 1fr 40px; 
+      grid-template-areas: "desc desc desc" "price qty btn"; 
+      background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+    }
+    .item-row input:nth-child(1) { grid-area: desc; margin-bottom: 8px; }
+    .item-row input:nth-child(2) { grid-area: price; margin-bottom: 0; }
+    .item-row input:nth-child(3) { grid-area: qty; margin-bottom: 0; }
+    .btn-remove { grid-area: btn; }
+  }
+
+  /* â”€â”€â”€ PRINT MODE â”€â”€â”€ */
+  @media print {
+    .sidebar, .actions { display: none !important; }
+    .app { display: block; }
+    .preview-area { padding: 0; display: block; overflow: visible; }
+    .scale-wrapper { width: auto !important; height: auto !important; transform: none !important; }
+    .preview-wrapper { position: static; box-shadow: none; transform: none !important; width: 100%; height: 100%; min-height: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-scroll">
+      <div class="sidebar-header">
+        <h1>DOC GENERATOR</h1>
+        <p>Sistem Pembuatan Dokumen Otomatis</p>
+      </div>
+
+      <div class="doc-tabs">
+        <button class="doc-tab active" data-type="PENAWARAN">Penawaran</button>
+        <button class="doc-tab" data-type="QUOTATION">Quotation</button>
+        <button class="doc-tab" data-type="INVOICE">Invoice</button>
+      </div>
+
+      <div class="form-body">
+        <div class="section">
+          <div class="section-title">Informasi Dokumen</div>
+          <div class="row-2">
+            <div>
+              <label>Tanggal</label>
+              <input type="date" id="docDate">
+            </div>
+            <div id="dueDateWrap" style="display:none">
+              <label>Jatuh Tempo</label>
+              <input type="date" id="dueDate">
+            </div>
+          </div>
+          <label>Nomor Surat (Opsional)</label>
+          <input type="text" id="docNo" placeholder="Cth: 001/INV/V/2026">
+          <label>Masa Berlaku / Catatan (Opsional)</label>
+          <input type="text" id="validity" placeholder="Cth: Berlaku 30 hari...">
+        </div>
+
+        <div class="section">
+          <div class="section-title">Dari (Pengirim / TTD)</div>
+          <label>Nama Lengkap & Gelar</label>
+          <input type="text" id="fromName" placeholder="NAMA PENYEDIA JASA" value="NAMA PENYEDIA JASA">
+          <label>Jabatan</label>
+          <input type="text" id="fromTitle" placeholder="ENGINEER" value="ENGINEER">
+
+          <div class="row-2">
+            <div>
+              <label>Tanda Tangan (PNG)</label>
+              <input type="file" id="sigUpload" accept="image/*">
+            </div>
+            <div>
+              <label>Stempel / Cap (PNG)</label>
+              <input type="file" id="stampUpload" accept="image/*">
+            </div>
+          </div>
+        </div>
+
+        <div class="section" id="paySection">
+          <div class="section-title">Informasi Pembayaran (Invoice)</div>
+          <label>Bank</label>
+          <input type="text" id="payBank" placeholder="BCA / BRI / Mandiri">
+          <label>No. Rekening</label>
+          <input type="text" id="payAccount" placeholder="123-456-7890">
+          <label>Atas Nama</label>
+          <input type="text" id="payAccountName" placeholder="Nama Rekening">
+        </div>
+
+        <div class="section">
+          <div class="section-title">Kepada (Penerima)</div>
+          <label>Nama / Perusahaan</label>
+          <input type="text" id="toName" placeholder="PT. CONTOH PELANGGAN" value="PT. CONTOH PELANGGAN">
+          <label>Alamat (opsional)</label>
+          <textarea id="toAddress" rows="2" placeholder="Alamat lengkap penerima..."></textarea>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Item / Jasa</div>
+          <div class="items-header">
+            <span>Deskripsi</span><span>Harga</span><span>Qty</span><span></span>
+          </div>
+          <div id="itemsList"></div>
+          <button class="btn-add" onclick="addItem()">+ Tambah Item</button>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Pajak & Diskon (Opsional)</div>
+          <div class="row-2">
+            <div>
+              <label>Diskon (Nominal Rp)</label>
+              <input type="number" id="discount" value="0" min="0" onchange="updatePreview()">
+            </div>
+            <div>
+              <label>PPN (%)</label>
+              <input type="number" id="tax" value="0" min="0" max="100" onchange="updatePreview()">
+            </div>
+          </div>
+          <div class="totals-box">
+            <div class="total-row"><span>Subtotal</span><span id="sub">0</span></div>
+            <div class="total-row" id="discRow" style="display:none; color:#e53e3e;"><span>Diskon</span><span id="discVal">-0</span></div>
+            <div class="total-row" id="taxRow" style="display:none"><span>PPN</span><span id="taxVal">0</span></div>
+            <div class="total-row grand"><span>Total</span><span id="grandTotal">0</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="actions">
+      <!-- <button class="btn-secondary" onclick="window.print()">ðŸ–¨ Print</button> -->
+      <button class="btn-primary" onclick="downloadPDF()">â¬‡ Download PDF</button>
+    </div>
+  </div>
+
+  <div class="preview-area" id="previewArea">
+    <div class="scale-wrapper" id="scaleWrap">
+      <div class="preview-wrapper" id="previewDoc">
+        
+        <div class="deco-accent-top"></div>
+        <img class="deco-bottom-left" src="letterhead.svg" alt="deco">
+
+        <div class="doc-main">
+          <div class="doc-head">
+            <img class="doc-kop" src="letterhead.svg" alt="Kop Surat">
+          </div>
+
+          <div class="doc-titlebar">
+            <div>
+              <div class="doc-title" id="pDocType">PENAWARAN</div>
+              <div class="doc-title-sub" id="pDocSub">DOKUMEN PENAWARAN</div>
+            </div>
+            <div class="doc-meta">
+              <div class="doc-meta-row" id="pMetaNoRow" style="display:none;">
+                <span class="doc-meta-label">No. Surat</span>
+                <span class="doc-meta-value accent" id="pDocNo"></span>
+              </div>
+              <div class="doc-meta-row">
+                <span class="doc-meta-label">Tanggal</span>
+                <span class="doc-meta-value" id="pDocDate">8 MEI 2026</span>
+              </div>
+              <div class="doc-meta-row" id="pMetaDueRow" style="display:none;">
+                <span class="doc-meta-label">Jatuh Tempo</span>
+                <span class="doc-meta-value" id="pDocDue"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="doc-to">
+            <div class="doc-to-label">Ditujukan Kepada</div>
+            <div class="doc-to-name" id="pToName">PT. CONTOH PELANGGAN</div>
+            <div class="doc-to-address" id="pToAddress" style="display:none;"></div>
+          </div>
+
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th id="pColService">SERVICE</th>
+                <th>HARGA</th>
+                <th>QTY</th>
+                <th>TOTAL</th>
+              </tr>
+            </thead>
+            <tbody id="pItemsBody"></tbody>
+          </table>
+
+          <div class="doc-summary">
+            <div class="doc-summary-inner">
+              <div class="doc-sum-row">
+                <span class="lbl">Subtotal</span>
+                <span class="val" id="pSub">0</span>
+              </div>
+              <div class="doc-sum-row neg" id="pDiscTR" style="display:none">
+                <span class="lbl">Diskon</span>
+                <span class="val" id="pDisc">0</span>
+              </div>
+              <div class="doc-sum-row" id="pTaxTR" style="display:none">
+                <span class="lbl" id="pTaxLabel">PPN</span>
+                <span class="val" id="pTax">0</span>
+              </div>
+              <div class="doc-sum-grand">
+                <span class="lbl" id="pGrandLabel">Total</span>
+                <span class="val" id="pGrand">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="doc-notes-area" id="pNotesWrap" style="display:none;">
+            <div class="doc-notes-card">
+              <div class="doc-notes-title">Catatan</div>
+              <div class="doc-notes" id="pNotes"></div>
+              <div class="doc-validity" id="pValidity"></div>
+            </div>
+          </div>
+
+          <div class="doc-footer">
+            <div class="doc-pay" id="pPayWrap" style="display:none;">
+              <div class="doc-pay-title">Informasi Pembayaran</div>
+              <div class="doc-pay-row" id="pBankRow" style="display:none;"><span class="k">Bank</span><span class="v" id="pBank"></span></div>
+              <div class="doc-pay-row" id="pAccRow" style="display:none;"><span class="k">No. Rekening</span><span class="v" id="pAccount"></span></div>
+              <div class="doc-pay-row" id="pAccNameRow" style="display:none;"><span class="k">Atas Nama</span><span class="v" id="pAccName"></span></div>
+            </div>
+
+            <div class="doc-sig">
+              <div class="doc-sig-label" id="pSigLabel">Hormat Kami,</div>
+
+              <div class="doc-sig-img-wrap">
+                <div id="pStampWrap" class="doc-stamp-wrap" style="display:none;">
+                  <img id="pStampImgElement" class="doc-stamp-img" src="">
+                </div>
+                
+                <img id="pSigImgElement" class="doc-sig-img" src="" style="display:none;">
+              </div>
+
+              <div class="doc-sig-name-wrap">
+                <span class="doc-sig-name" id="pFromName">NAMA PENYEDIA JASA</span>
+              </div>
+              <div class="doc-sig-title" id="pFromTitle">ENGINEER</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+let docType = 'PENAWARAN';
+let items = [{ desc: 'CONTOH JASA PROFESIONAL', price: 1000000, qty: 1 }];
+const A4_HEIGHT = 1123;
+
+// â”€â”€â”€ LOGIKA RESPONSIVE SCALE â”€â”€â”€
+function adjustPreviewScale() {
+  const scaleWrap = document.getElementById('scaleWrap');
+  const previewDoc = document.getElementById('previewDoc');
+  const area = document.getElementById('previewArea');
+  
+  const availableWidth = area.clientWidth - 40; 
+  const currentHeight = parseInt(previewDoc.style.height) || A4_HEIGHT;
+
+  if (availableWidth < 794) {
+    const scale = availableWidth / 794;
+    previewDoc.style.transform = `scale(${scale})`;
+    scaleWrap.style.width = `${794 * scale}px`;
+    scaleWrap.style.height = `${currentHeight * scale}px`;
+  } else {
+    previewDoc.style.transform = `none`;
+    scaleWrap.style.width = `794px`;
+    scaleWrap.style.height = `${currentHeight}px`;
+  }
+}
+
+window.addEventListener('resize', adjustPreviewScale);
+
+// â”€â”€â”€ INISIALISASI â”€â”€â”€
+function init() {
+  const today = new Date(); 
+  document.getElementById('docDate').value = today.toISOString().split('T')[0];
+  const logo = document.querySelector('.doc-kop');
+  if (logo && !logo.complete) {
+    const done = () => { logo.style.visibility = 'visible'; updatePreview(); };
+    logo.style.visibility = 'hidden';
+    logo.addEventListener('load', done, { once: true });
+    logo.addEventListener('error', () => { logo.style.display = 'none'; }, { once: true });
+  }
+  renderItems();
+  applyDocType();
+  updatePreview();
+
+  ['docDate','docNo','fromName','fromTitle','toName','toAddress','validity','dueDate',
+   'payBank','payAccount','payAccountName'
+  ].forEach(id => { 
+    const el = document.getElementById(id); 
+    if(el) el.addEventListener('input', updatePreview); 
+  });
+}
+
+// Upload TTD
+document.getElementById('sigUpload').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      const imgEl = document.getElementById('pSigImgElement');
+      imgEl.src = event.target.result;
+      imgEl.style.display = 'block';
+    }
+    reader.readAsDataURL(file);
+  } else {
+    document.getElementById('pSigImgElement').style.display = 'none';
+  }
+});
+
+// Upload Stempel FIX
+document.getElementById('stampUpload').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      const imgEl = document.getElementById('pStampImgElement');
+      imgEl.src = event.target.result;
+      document.getElementById('pStampWrap').style.display = 'flex';
+    }
+    reader.readAsDataURL(file);
+  } else {
+    document.getElementById('pStampWrap').style.display = 'none';
+  }
+});
+
+document.querySelectorAll('.doc-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.doc-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    docType = tab.dataset.type;
+    applyDocType();
+    updatePreview();
+  });
+});
+
+function applyDocType() {
+  const isInvoice = docType === 'INVOICE';
+  document.getElementById('dueDateWrap').style.display = isInvoice ? 'block' : 'none';
+  document.getElementById('paySection').style.display = isInvoice ? 'block' : 'none';
+  const th = document.getElementById('pColService');
+  th.textContent = (docType === 'INVOICE' || docType === 'QUOTATION') ? 'DESCRIPTION' : 'SERVICE';
+}
+
+function renderItems() {
+  const list = document.getElementById('itemsList');
+  list.innerHTML = '';
+  items.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = `
+      <input type="text" placeholder="Deskripsi jasa" value="${escHtml(item.desc)}" oninput="items[${i}].desc=this.value;updatePreview()">
+      <input type="number" placeholder="Harga" value="${item.price||''}" min="0" oninput="items[${i}].price=+this.value;updatePreview()">
+      <input type="number" placeholder="Qty" value="${item.qty}" min="1" oninput="items[${i}].qty=+this.value;updatePreview()">
+      <button class="btn-remove" onclick="removeItem(${i})" title="Hapus">Ã—</button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function addItem() {
+  items.push({ desc: '', price: 0, qty: 1 });
+  renderItems();
+  updatePreview();
+}
+
+function removeItem(i) {
+  if (items.length === 1) items[0] = { desc: '', price: 0, qty: 1 };
+  else items.splice(i, 1);
+  renderItems();
+  updatePreview();
+}
+
+function calcTotals() {
+  const sub = items.reduce((a, it) => a + (it.price * it.qty), 0);
+  const disc = +(document.getElementById('discount').value || 0); 
+  const taxPct = +(document.getElementById('tax').value || 0);
+  const taxBase = sub - disc;
+  const tax = taxBase * (taxPct / 100);
+  const grand = taxBase + tax;
+  return { sub, disc, tax, grand };
+}
+
+function fmt(n) { return Math.round(n).toLocaleString('id-ID'); }
+function fmtDate(str) {
+  if (!str) return '';
+  const months = ["JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"];
+  const d = new Date(str + 'T00:00:00');
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function updatePreview() {
+  const { sub, disc, tax, grand } = calcTotals();
+  const taxPct = +document.getElementById('tax').value;
+
+  document.getElementById('sub').textContent = fmt(sub);
+  document.getElementById('discVal').textContent = '-' + fmt(disc);
+  document.getElementById('taxVal').textContent = fmt(tax);
+  document.getElementById('grandTotal').textContent = fmt(grand);
+  document.getElementById('discRow').style.display = disc > 0 ? 'flex' : 'none';
+  document.getElementById('taxRow').style.display = taxPct > 0 ? 'flex' : 'none';
+
+  document.getElementById('pDocType').textContent = docType;
+  document.getElementById('pDocSub').textContent = 'DOKUMEN ' + docType;
+  document.getElementById('pDocDate').textContent = fmtDate(document.getElementById('docDate').value);
+
+  const docNo = document.getElementById('docNo').value.trim();
+  const pDocNo = document.getElementById('pDocNo');
+  if (docNo) {
+    pDocNo.textContent = docNo;
+    document.getElementById('pMetaNoRow').style.display = 'flex';
+  } else {
+    document.getElementById('pMetaNoRow').style.display = 'none';
+  }
+
+  const dueDate = document.getElementById('dueDate').value;
+  if (docType === 'INVOICE' && dueDate) {
+    document.getElementById('pDocDue').textContent = fmtDate(dueDate);
+    document.getElementById('pMetaDueRow').style.display = 'flex';
+  } else {
+    document.getElementById('pMetaDueRow').style.display = 'none';
+  }
+
+  document.getElementById('pToName').textContent = document.getElementById('toName').value.trim() || 'NAMA PERUSAHAAN';
+  const toAddr = document.getElementById('toAddress').value.trim();
+  const toAddrEl = document.getElementById('pToAddress');
+  toAddrEl.textContent = toAddr;
+  toAddrEl.style.display = toAddr ? 'block' : 'none';
+
+  const tbody = document.getElementById('pItemsBody');
+  if (items.length === 0 || (items.length === 1 && !items[0].desc && !items[0].price)) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#cbd5e0; font-weight:600;">Belum ada item</td></tr>';
+  } else {
+    tbody.innerHTML = items.map((it, idx) => {
+      const t = it.price * it.qty;
+      return `<tr>
+        <td>${idx + 1}</td>
+        <td style="white-space: pre-line;">${escHtml(it.desc)}</td>
+        <td>${fmt(it.price)}</td>
+        <td>${it.qty}</td>
+        <td>${fmt(t)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  document.getElementById('pSub').textContent = fmt(sub);
+  document.getElementById('pDiscTR').style.display = disc > 0 ? 'flex' : 'none';
+  document.getElementById('pTaxTR').style.display = taxPct > 0 ? 'flex' : 'none';
+  if (disc > 0) document.getElementById('pDisc').textContent = '-' + fmt(disc);
+  if (taxPct > 0) document.getElementById('pTax').textContent = fmt(tax);
+  document.getElementById('pTaxLabel').textContent = 'PPN ' + taxPct + '%';
+  document.getElementById('pGrandLabel').textContent = docType === 'INVOICE' ? 'Jumlah Bayar' : 'Total ' + docType.charAt(0) + docType.slice(1).toLowerCase();
+  document.getElementById('pGrand').textContent = fmt(grand);
+
+  document.getElementById('pSigLabel').textContent = 'Hormat Kami,';
+
+  const payFields = [['pBankRow','pBank','payBank'],['pAccRow','pAccount','payAccount'],['pAccNameRow','pAccName','payAccountName']];
+  let hasPay = false;
+  payFields.forEach(([rowId, valId, inputId]) => {
+    const v = document.getElementById(inputId).value.trim();
+    if (v) {
+      hasPay = true;
+      document.getElementById(valId).textContent = v;
+    }
+    document.getElementById(rowId).style.display = v ? 'flex' : 'none';
+  });
+  document.getElementById('pPayWrap').style.display = (docType === 'INVOICE' && hasPay) ? 'block' : 'none';
+
+  document.getElementById('pFromName').textContent = document.getElementById('fromName').value.trim() || 'NAMA ANDA';
+  document.getElementById('pFromTitle').textContent = document.getElementById('fromTitle').value.trim() || 'JABATAN';
+
+  const val = document.getElementById('validity').value.trim();
+  const notesWrap = document.getElementById('pNotesWrap');
+  if (val) {
+    document.getElementById('pValidity').textContent = val;
+    notesWrap.style.display = 'block';
+  } else {
+    notesWrap.style.display = 'none';
+  }
+
+  const wrapper = document.getElementById('previewDoc');
+  wrapper.style.height = 'max-content'; 
+  
+  setTimeout(() => {
+    const currentContentHeight = wrapper.offsetHeight;
+    const neededPages = Math.ceil(currentContentHeight / A4_HEIGHT);
+    const newHeight = neededPages * A4_HEIGHT;
+    wrapper.style.height = newHeight + 'px';
+    adjustPreviewScale();
+  }, 10);
+}
+
+async function downloadPDF() {
+  const btn = document.querySelector('.btn-primary');
+  const el = document.getElementById('previewDoc');
+  const oldTransform = el.style.transform;
+  const oldLabel = btn.textContent;
+
+  try {
+    btn.disabled = true;
+    btn.textContent = '⏳ Memproses...';
+    window.scrollTo(0, 0);
+    el.style.transform = 'none';
+
+    const images = Array.from(el.querySelectorAll('img'))
+      .filter(img => (img.getAttribute('src') || '').length > 0);
+    await Promise.all(images.map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise(res => {
+        const done = () => { clearTimeout(timer); res(); };
+        const timer = setTimeout(done, 3000);
+        img.addEventListener('load', done, { once: true });
+        img.addEventListener('error', done, { once: true });
+      });
+    }));
+
+    const canvas = await html2canvas(el, {
+      scale: 2,
+      backgroundColor: '#ffffff'
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+
+    const canvasRatio = pdfWidth / canvas.width;
+    const imgHeight = canvas.height * canvasRatio;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+    heightLeft -= pdfHeight;
+
+    while (heightLeft > 1) {
+      position -= pdfHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+      heightLeft -= pdfHeight;
+    }
+
+    const filename = `${docType.toLowerCase()}_${document.getElementById('toName').value.trim().replace(/\s+/g, '_')}.pdf`;
+    pdf.save(filename);
+  } catch (err) {
+    console.error(err);
+    const isTainted = err && /SecurityError|tainted/i.test(err.name + ' ' + err.message);
+    alert(isTainted
+      ? 'Gagal membuat PDF.\n\nBrowser tidak mengizinkan pembacaan gambar pada file lokal.\nBuka halaman ini lewat server web, contoh:\nhttp://localhost/generator_invoice/index.html'
+      : 'Gagal membuat PDF: ' + (err && err.message ? err.message : err));
+  } finally {
+    el.style.transform = oldTransform;
+    btn.disabled = false;
+    btn.textContent = oldLabel;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
